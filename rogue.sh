@@ -13,6 +13,7 @@ _term_resize() {
 } && trap '_term_resize' WINCH
 
 _term_init() {
+   printf '[?1049h'
    _term_resize
    stty -echo -icanon
    printf '[?25l'
@@ -23,6 +24,7 @@ _term_shutdown() {
    stty echo icanon
    printf '[?25h'
    clear
+   printf '[?1049l'
    exit 0
 } && trap '_term_shutdown' INT
 
@@ -44,10 +46,35 @@ fakedraw() { # <y> <x> <char>
    printf '[%d;%dH%s' $1 $2 "$3"
 }
 
+# visually clears an entire line
+fakelineclear() { # <y>
+   buf=""
+   i=0
+   while [ $i -le $columns ]; do
+      buf="${buf} "
+      i=$((i+1))
+   done
+   printf '[%d;H%s' $1 "$buf"
+}
+
 # remove a character
 nullify() { # <y> <x>
    printf '[%d;%dH%s' $1 $2 " "
    eval "unset y${1}x${2}"
+}
+
+# draws the database on the screen in case you've drawn all over it with 'fakedraw' and such
+recover() {
+   i=0
+   while [ $i -le $lines ]; do
+      ii=0
+      while [ $ii -le $columns ]; do
+         #eval "[ \"\$y${i}x${ii}\" ]" && 
+         eval "printf '[%d;%dH%s' \"\${i}\" \"\${ii}\" \"\$y${i}x${ii}\""
+         ii=$((ii+1))
+      done
+      i=$((i+1))
+   done
 }
 
 debug() { # <string>
@@ -55,32 +82,24 @@ debug() { # <string>
 }
 
 drawbox() { # <y1> <x1> <y2> <x2> <char>
-   # top
-   i=0
+   i=0 # top
    while [ $i -le $(($4-$2)) ]; do
-      printf '[%d;%dH%s' $1 $(($2+i)) "$5"
-      eval "y${1}x$(($2+i))=\"${5}\""
+      drawchar $1 $(($2+i)) "$5"
       i=$((i+1))
    done
-   # bottom
-   i=0
+   i=0 # bottom
    while [ $i -le $(($4-$2)) ]; do
-      printf '[%d;%dH%s' $3 $(($2+i)) "$5"
-      eval "y${3}x$(($2+i))=\"${5}\""
+      drawchar $3 $(($2+i)) "$5"
       i=$((i+1))
    done
-   # left
-   i=0
+   i=0 # left
    while [ $i -le $(($3-$1)) ]; do
-      printf '[%d;%dH%s' $(($1+i)) $2 "$5"
-      eval "y$(($1+i))x${2}=\"${5}\""
+      drawchar $(($1+i)) $2 "$5"
       i=$((i+1))
    done
-   # right
-   i=0
+   i=0 # right
    while [ $i -le $(($3-$1)) ]; do
-      printf '[%d;%dH%s' $(($1+i)) $4 "$5"
-      eval "y$(($1+i))x${4}=\"${5}\""
+      drawchar $(($1+i)) $4 "$5"
       i=$((i+1))
    done
 }
@@ -197,6 +216,17 @@ hitscan_all() { # <y> <x> <direction>
    esac
 }
 
+cmd() {
+   fakedraw $((lines-1)) 1 ":"
+   printf '[?25h'
+   stty echo icanon
+   read cmd
+   stty -echo -icanon
+   printf '[?25l'
+   $cmd
+   fakelineclear $((lines-1))
+}
+
 ### MAIN ###
 
 drawbox $(gensquare $((lines/2)) $((columns/2)) 6 12) "#"
@@ -230,6 +260,7 @@ while true; do
    # compute input
    case $key in
       q) _term_shutdown;;
+      :) cmd;;
 
       # moving
       h) player_x=$((player_x-1));;
