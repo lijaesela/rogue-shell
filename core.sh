@@ -1,10 +1,10 @@
 #!/bin/sh -ef
 
 #
-# once a recreation of rogue in pure POSIX shell.
-# this is now a general playground for what has
-# grown to be a surprisingly functional game engine.
+# game engine in posix shell.
 #
+
+### CORE FUNCTIONS ###
 
 _term_resize() {
    termsize="$(stty size)"
@@ -28,11 +28,9 @@ _term_shutdown() {
    exit 0
 } && trap '_term_shutdown' INT
 
-### FUNCTIONS ###
-
 #
-# rogue-shell uses 'eval' and simple variables to track characters.
-# whenever a character is drawn, it is added to this database.
+# this engine uses 'eval' and simple variables to remember characters drawn.
+# whenever a character is drawn, it is then added to this 'database'.
 # this is how collision is done.
 #
 
@@ -44,6 +42,16 @@ drawchar() { # <y> <x> <char>
 # print a character without adding it to the database
 fakedraw() { # <y> <x> <char>
    printf '[%d;%dH%s' $1 $2 "$3"
+}
+
+# sets one cell to what it is in the database
+recover() { # <y> <x>
+   buf="$(collide $1 $2)"
+   if [ "$buf" ]; then
+      fakedraw $1 $2 "$buf"
+   else
+      fakedraw $1 $2 " "
+   fi
 }
 
 # visually clears an entire line
@@ -63,13 +71,12 @@ nullify() { # <y> <x>
    eval "unset y${1}x${2}"
 }
 
-# draws the database on the screen in case you've drawn all over it with 'fakedraw' and such
-recover() {
+# draws the database on the screen
+recover_all() {
    i=0
    while [ $i -le $lines ]; do
       ii=0
       while [ $ii -le $columns ]; do
-         #eval "[ \"\$y${i}x${ii}\" ]" && 
          eval "printf '[%d;%dH%s' \"\${i}\" \"\${ii}\" \"\$y${i}x${ii}\""
          ii=$((ii+1))
       done
@@ -104,21 +111,19 @@ drawbox() { # <y1> <x1> <y2> <x2> <char>
    done
 }
 
-# returns what a position holds
+gensquare() { # <y> <x> <y radius> <x radius>
+   # returns: "<y1> <x1> <y2> <x2>"
+   echo "$(($1-$3)) $(($2-$4)) $(($1+$3)) $(($2+$4))"
+}
+
 collide() { # <y> <x>
    # returns: <char>
    eval "echo \"\$y${1}x${2}\""
 }
 
-# outputs args for drawbox
-gensquare() { # <y> <x> <y radius> <x radius>
-   # returns: <y1> <x1> <y2> <x2>
-   echo "$(($1-$3)) $(($2-$4)) $(($1+$3)) $(($2+$4))"
-}
-
-# scan for a particular character
+# scan for a specific character in a direction
 hitscan() { # <y> <x> <direction> <character>
-   # returns: <y> <x>
+   # returns: "<y> <x>"
    case $3 in
       left|h)
          i=$2
@@ -164,9 +169,9 @@ hitscan() { # <y> <x> <direction> <character>
    esac
 }
 
-# scan for any character
+# scan for any character in a direction
 hitscan_all() { # <y> <x> <direction>
-   # returns: <y> <x> <char>
+   # returns: "<y> <x> <char>"
    case $3 in
       left|h)
          i=$2
@@ -216,6 +221,7 @@ hitscan_all() { # <y> <x> <direction>
    esac
 }
 
+# in-game dev console
 cmd() {
    fakedraw $((lines-1)) 1 ":"
    printf '[?25h'
@@ -226,76 +232,3 @@ cmd() {
    $cmd
    fakelineclear $((lines-1))
 }
-
-### MAIN ###
-
-drawbox $(gensquare $((lines/2)) $((columns/2)) 6 12) "#"
-drawbox $(gensquare $((lines/2)) $((columns/2)) 7 13) "#"
-drawbox $(gensquare $((lines/3)) $((columns/3)) 4 8) "#"
-drawbox $(gensquare $((lines/3*2)) $((columns/3*2)) 4 8) "#"
-
-player_y=$((lines/2))
-player_x=$((columns/2))
-
-while true; do
-
-   # draw player
-   fakedraw $player_y $player_x "$"
-
-   # grab input
-   key=$(dd bs=1 count=1 2>/dev/null)
-
-   # undraw player, redraw anything that player trampled
-   trample="$(collide $player_y $player_x)"
-   if [ "$trample" ]; then
-      fakedraw $player_y $player_x "$trample"
-   else
-      fakedraw $player_y $player_x " "
-   fi
-
-   # store old position
-   player_y_old=$player_y
-   player_x_old=$player_x
-
-   # compute input
-   case $key in
-      q) _term_shutdown;;
-      :) cmd;;
-
-      # moving
-      h) player_x=$((player_x-1));;
-      j) player_y=$((player_y+1));;
-      k) player_y=$((player_y-1));;
-      l) player_x=$((player_x+1));;
-
-      # shooting
-      s) fakedraw $player_y $player_x "#"
-         key=$(dd bs=1 count=1 2>/dev/null)
-         dst="$(hitscan_all $player_y $player_x $key)"
-         case "${dst##* }" in
-            "#") drawchar ${dst% ?} "=";;
-            "=") drawchar ${dst% ?} "+";;
-            "+") drawchar ${dst% ?} "-";;
-            "-") nullify ${dst% ?};;
-         esac;;
-   esac
-
-   # collision with any character
-   case "$(collide $player_y $player_x)" in
-      "#"|"="|"+"|"-")
-         player_y=$player_y_old
-         player_x=$player_x_old
-         ;;
-   esac
-
-   # collision with terminal
-   if [ $player_y -ge $lines ]; then
-      player_y=$lines
-   elif [ $player_y -le 0 ]; then
-      player_y=1
-   elif [ $player_x -ge $columns ]; then
-      player_x=$columns
-   elif [ $player_x -le 0 ]; then
-      player_x=1
-   fi
-done
