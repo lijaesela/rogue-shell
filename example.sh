@@ -20,13 +20,8 @@ player_x=$((columns/2))
 # main
 while true; do
 
-   # draw player
    fakedraw $player_y $player_x "$"
-
-   # grab input
    getkey key
-
-   # undraw player
    recover $player_y $player_x
 
    # store old position

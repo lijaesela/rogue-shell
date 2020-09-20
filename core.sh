@@ -2,7 +2,7 @@
 
 #
 # game engine in posix shell.
-# all documentation is in comments!
+# shellcheck disable=SC2086
 #
 
 ### TERMINAL ###
@@ -19,7 +19,6 @@ term_init() {
 
 # needs to be run at the end of every game
 # runs when you hit C-c
-# can still be called manually
 term_shutdown() {
    stty echo icanon
    printf '[2J[?25h[?1049l'
@@ -28,7 +27,6 @@ term_shutdown() {
 
 # gets window dimensions
 # runs with 'term_init' and with window resize
-# there is no reason to call this manually
 term_resize() {
    termsize="$(stty size)"
    lines=${termsize%% *}
@@ -45,10 +43,8 @@ term_resize() {
 #
 
 # pause and get input from the keyboard
-getkey() { # <var name>
+getkey() { # <var>
    eval "${1}=\$(dd bs=1 count=1 2>/dev/null)"
-   # posix can be limiting with input.
-   # try using this engine with bash and doing cool stuff wiwth 'read'!
 }
 
 # add a character
@@ -64,8 +60,7 @@ fakedraw() { # <y> <x> <char>
 
 # visually clears an entire line
 fakelineclear() { # <y>
-   buf=""
-   i=0
+   buf=""; i=0
    while [ $i -le $columns ]; do
       buf="${buf} "
       i=$((i+1))
@@ -80,7 +75,6 @@ nullify() { # <y> <x>
 }
 
 # sets one cell to visually match what it is in the database
-# draws spaces if a cell is null
 recover() { # <y> <x>
    buf="$(collide $1 $2)"
    if [ "$buf" ]; then
@@ -103,12 +97,16 @@ recover_all() {
    done
 }
 
+# woo!!! it's faster!
+grepfind() { # <char>
+   set | grep '^y[0-9]*x[0-9]*' | grep "${1}'$"
+}
+
 # return all instances of a character on screen
 # formatted as a space-separated string of database variable names
 # !!! RESOURCE INTENSIVE !!!
 findchar() { # <char>
    # returns: "y<#>x<#> <...>" OR null
-   tmpbuf=""
    buf=""
    i=0
    while [ $i -le $lines ]; do
@@ -271,9 +269,9 @@ cmd() {
    fakedraw $((lines-1)) 1 ":"
    printf '[?25h'
    stty echo icanon
-   read cmd
+   read -r cmd
    stty -echo -icanon
    printf '[?25l'
-   $cmd
+   [ "$cmd" ] && PATH="" $cmd
    fakelineclear $((lines-1))
 }
