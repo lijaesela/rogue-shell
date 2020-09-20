@@ -7,22 +7,24 @@
 #
 
 . ./core.sh
+term_init
 
+# set stage
 drawbox $(gensquare $((lines/2)) $((columns/2)) 6 12) "#"
 drawbox $(gensquare $((lines/2)) $((columns/2)) 7 13) "#"
 drawbox $(gensquare $((lines/3)) $((columns/3)) 4 8) "#"
 drawbox $(gensquare $((lines/3*2)) $((columns/3*2)) 4 8) "#"
-
 player_y=$((lines/2))
 player_x=$((columns/2))
 
+# main
 while true; do
 
    # draw player
    fakedraw $player_y $player_x "$"
 
    # grab input
-   key=$(dd bs=1 count=1 2>/dev/null)
+   getkey key
 
    # undraw player
    recover $player_y $player_x
@@ -33,7 +35,7 @@ while true; do
 
    # compute input
    case $key in
-      q) _term_shutdown;;
+      q) term_shutdown;;
       :) cmd;;
 
       # moving
@@ -45,7 +47,7 @@ while true; do
       # shooting
       s) fakedraw $player_y $player_x "#"
          key=$(dd bs=1 count=1 2>/dev/null)
-         dst="$(hitscan_all $player_y $player_x $key)"
+         dst="$(hitscan_any $player_y $player_x $key)"
          case "${dst##* }" in
             "#") drawchar ${dst% ?} "=";;
             "=") drawchar ${dst% ?} "+";;
@@ -67,7 +69,8 @@ while true; do
       player_y=$lines
    elif [ $player_y -le 0 ]; then
       player_y=1
-   elif [ $player_x -ge $columns ]; then
+   fi
+   if [ $player_x -ge $columns ]; then
       player_x=$columns
    elif [ $player_x -le 0 ]; then
       player_x=1

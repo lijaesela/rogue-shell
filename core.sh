@@ -2,56 +2,64 @@
 
 #
 # game engine in posix shell.
+# all documentation is in comments!
 #
 
-### CORE FUNCTIONS ###
+### TERMINAL ###
 
-_term_resize() {
+# needs to be run at the beginning of every game
+# must be called manually
+term_init() {
+   term_resize
+   stty -echo -icanon
+   printf '[?1049h[2J[?25l'
+   trap 'term_shutdown' INT
+   trap 'term_resize' WINCH
+}
+
+# needs to be run at the end of every game
+# runs when you hit C-c
+# can still be called manually
+term_shutdown() {
+   stty echo icanon
+   printf '[2J[?25h[?1049l'
+   exit 0
+}
+
+# gets window dimensions
+# runs with 'term_init' and with window resize
+# there is no reason to call this manually
+term_resize() {
    termsize="$(stty size)"
    lines=${termsize%% *}
    columns=${termsize##* }
-} && trap '_term_resize' WINCH
+}
 
-_term_init() {
-   printf '[?1049h'
-   _term_resize
-   stty -echo -icanon
-   printf '[?25l'
-   clear
-} && _term_init
-
-_term_shutdown() {
-   stty echo icanon
-   printf '[?25h'
-   clear
-   printf '[?1049l'
-   exit 0
-} && trap '_term_shutdown' INT
+### CORE FUNCTIONS ###
 
 #
-# this engine uses 'eval' and simple variables to remember characters drawn.
+# this engine uses 'eval' and simple variables to remember characters.
 # whenever a character is drawn, it is then added to this 'database'.
-# this is how collision is done.
+# for example: if 'drawchar' is used to place '%' at row 4 column 4,
+# the string '%' is assigned to the variable 'y4x4'.
 #
 
+# pause and get input from the keyboard
+getkey() { # <var name>
+   eval "${1}=\$(dd bs=1 count=1 2>/dev/null)"
+   # posix can be limiting with input.
+   # try using this engine with bash and doing cool stuff wiwth 'read'!
+}
+
+# add a character
 drawchar() { # <y> <x> <char>
    printf '[%d;%dH%s' $1 $2 "$3"
    eval "y${1}x${2}=\"${3}\""
 }
 
-# print a character without adding it to the database
+# print a character (or a string) without adding it to the database
 fakedraw() { # <y> <x> <char>
    printf '[%d;%dH%s' $1 $2 "$3"
-}
-
-# sets one cell to what it is in the database
-recover() { # <y> <x>
-   buf="$(collide $1 $2)"
-   if [ "$buf" ]; then
-      fakedraw $1 $2 "$buf"
-   else
-      fakedraw $1 $2 " "
-   fi
 }
 
 # visually clears an entire line
@@ -71,6 +79,17 @@ nullify() { # <y> <x>
    eval "unset y${1}x${2}"
 }
 
+# sets one cell to visually match what it is in the database
+# draws spaces if a cell is null
+recover() { # <y> <x>
+   buf="$(collide $1 $2)"
+   if [ "$buf" ]; then
+      fakedraw $1 $2 "$buf"
+   else
+      fakedraw $1 $2 " "
+   fi
+}
+
 # draws the database on the screen
 recover_all() {
    i=0
@@ -84,10 +103,31 @@ recover_all() {
    done
 }
 
+# return all instances of a character on screen
+# formatted as a space-separated string of database variable names
+# !!! RESOURCE INTENSIVE !!!
+findchar() { # <char>
+   # returns: "y<#>x<#> <...>" OR null
+   tmpbuf=""
+   buf=""
+   i=0
+   while [ $i -le $lines ]; do
+      ii=0
+      while [ $ii -le $columns ]; do
+         [ "$(collide $i $ii)" = "$1" ] && buf="${buf}y${i}x${ii} "
+         ii=$((ii+1))
+      done
+      i=$((i+1))
+   done
+   echo "$buf"
+}
+
+
 debug() { # <string>
    printf '[H%s' "$*"
 }
 
+# add characters in a box shape between 2 points
 drawbox() { # <y1> <x1> <y2> <x2> <char>
    i=0 # top
    while [ $i -le $(($4-$2)) ]; do
@@ -111,19 +151,23 @@ drawbox() { # <y1> <x1> <y2> <x2> <char>
    done
 }
 
+# outputs arguments for drawbox
+# an alternate method of using drawbox that is usually easier
 gensquare() { # <y> <x> <y radius> <x radius>
    # returns: "<y1> <x1> <y2> <x2>"
    echo "$(($1-$3)) $(($2-$4)) $(($1+$3)) $(($2+$4))"
 }
 
+# returns what is in a location in the database
 collide() { # <y> <x>
    # returns: <char>
    eval "echo \"\$y${1}x${2}\""
 }
 
 # scan for a specific character in a direction
+# stops at the first instance
 hitscan() { # <y> <x> <direction> <character>
-   # returns: "<y> <x>"
+   # returns: "<y> <x>" OR null
    case $3 in
       left|h)
          i=$2
@@ -170,8 +214,9 @@ hitscan() { # <y> <x> <direction> <character>
 }
 
 # scan for any character in a direction
-hitscan_all() { # <y> <x> <direction>
-   # returns: "<y> <x> <char>"
+# stops at the first cell that isn't null
+hitscan_any() { # <y> <x> <direction>
+   # returns: "<y> <x> <char>" OR null
    case $3 in
       left|h)
          i=$2
@@ -221,7 +266,7 @@ hitscan_all() { # <y> <x> <direction>
    esac
 }
 
-# in-game dev console
+# in-game dev console for running all of these commands
 cmd() {
    fakedraw $((lines-1)) 1 ":"
    printf '[?25h'
