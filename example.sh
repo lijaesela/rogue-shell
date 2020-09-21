@@ -1,25 +1,25 @@
 #!/bin/sh -ef
+# shellcheck disable=SC2086
+# shellcheck disable=SC2046
 
 #
 # example game
 # vim keys to move
-# s + vim keys to shoot at walls
+# '#' is a wall
+# 'V ^ < >' move the player in the directions they point
 #
 
 . ./core.sh
 term_init
 
 # set stage
-drawbox $(gensquare $((lines/2)) $((columns/2)) 6 12) "#"
-drawbox $(gensquare $((lines/2)) $((columns/2)) 7 13) "#"
-drawbox $(gensquare $((lines/3)) $((columns/3)) 4 8) "#"
-drawbox $(gensquare $((lines/3*2)) $((columns/3*2)) 4 8) "#"
-player_y=$((lines/2))
-player_x=$((columns/2))
+. ./save.sh
+recover_all
+player_y=$midline
+player_x=$midcol
 
 # main
 while true; do
-
    fakedraw $player_y $player_x "$"
    getkey key
    recover $player_y $player_x
@@ -40,8 +40,8 @@ while true; do
       l) player_x=$((player_x+1));;
 
       # shooting
-      s) fakedraw $player_y $player_x "#"
-         key=$(dd bs=1 count=1 2>/dev/null)
+      s) fakedraw $player_y $player_x "%"
+         getkey key
          dst="$(hitscan_any $player_y $player_x $key)"
          case "${dst##* }" in
             "#") drawchar ${dst% ?} "=";;
@@ -56,6 +56,26 @@ while true; do
       "#"|"="|"+"|"-")
          player_y=$player_y_old
          player_x=$player_x_old
+         ;;
+      V)
+         dst="$(hitscan $player_y $player_x down "")"
+         player_y=${dst%% *}
+         player_x=${dst##* }
+         ;;
+      ^)
+         dst="$(hitscan $player_y $player_x up "")"
+         player_y=${dst%% *}
+         player_x=${dst##* }
+         ;;
+      <)
+         dst="$(hitscan $player_y $player_x left "")"
+         player_y=${dst%% *}
+         player_x=${dst##* }
+         ;;
+      >)
+         dst="$(hitscan $player_y $player_x right "")"
+         player_y=${dst%% *}
+         player_x=${dst##* }
          ;;
    esac
 
