@@ -4,7 +4,9 @@
 
 #
 # example game
-# vim keys to move
+# 'hjkl' to move
+# 's', then 'hjkl' to shoot
+#
 # '#' is a wall
 # 'V ^ < >' move the player in the directions they point
 #
@@ -78,16 +80,4 @@ while true; do
          player_x=${dst##* }
          ;;
    esac
-
-   # collision with terminal
-   if [ $player_y -ge $lines ]; then
-      player_y=$lines
-   elif [ $player_y -le 0 ]; then
-      player_y=1
-   fi
-   if [ $player_x -ge $columns ]; then
-      player_x=$columns
-   elif [ $player_x -le 0 ]; then
-      player_x=1
-   fi
 done

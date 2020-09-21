@@ -3,7 +3,8 @@
 # shellcheck disable=SC2046
 
 #
-# game engine in posix shell.
+# game engine in posix shell
+# somewhat similar to ncurses
 #
 
 ### TERMINAL ###
@@ -56,7 +57,7 @@ drawchar() { # <y> <x> <char>
    eval "y${1}x${2}=\"${3}\""
 }
 
-# print a character (or a string) without adding it to the database
+# print a character without adding it to the database
 fakedraw() { # <y> <x> <char>
    printf '[%d;%dH%s' $1 $2 "$3"
 }
