@@ -35,6 +35,7 @@ term_resize() {
    columns=${termsize##* }
    midline=$((lines/2))
    midcol=$((columns/2))
+   recover_all
 }
 
 ### CORE FUNCTIONS ###

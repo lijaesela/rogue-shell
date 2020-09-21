@@ -17,8 +17,18 @@ term_init
 # set stage
 . ./save.sh
 recover_all
-player_y=$midline
-player_x=$midcol
+
+# find 's'
+spawn="$(grepfind "s")"
+# set player at 's'
+spawn_y="${spawn#y}"
+spawn_y="${spawn_y%%x*}"
+player_y=$spawn_y
+spawn_x="${spawn##*x}"
+spawn_x="${spawn_x%%=*}"
+player_x=$spawn_x
+# delete 's'
+nullify $spawn_y $spawn_x
 
 # main
 while true; do
