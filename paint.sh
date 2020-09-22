@@ -1,6 +1,6 @@
 #!/bin/sh -ef
-# shellcheck disable=SC2086
-# shellcheck disable=SC2046
+#shellcheck disable=SC2086
+#shellcheck disable=SC2046
 
 #
 # level editor, works like a paint program
@@ -10,7 +10,7 @@
 # 'd' deletes one character
 # 'w' saves the file
 # 'q' quits
-# any key not reserved is simply inserted if pressed.
+# any key not reserved here is simply inserted if pressed.
 #
 
 . ./core.sh
@@ -20,7 +20,7 @@ term_init
 if [ "$1" ]; then
    file="$1"
    if [ -f "$file" ]; then
-      . "$file"
+      smart_source "$file"
       recover_all
    fi
 else
@@ -28,8 +28,8 @@ else
 fi
 
 # main
-brush_y=$midline
-brush_x=$midcol
+brush_y=$((lines/2))
+brush_x=$((columns/2))
 while true; do
    under="$(collide $brush_y $brush_x)"
    if [ "$under" ]; then
