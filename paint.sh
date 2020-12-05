@@ -24,7 +24,7 @@ if [ "$1" ]; then
       recover_all
    fi
 else
-   file="paintdbfile.sh"
+   file="paintdbfile"
 fi
 
 # main

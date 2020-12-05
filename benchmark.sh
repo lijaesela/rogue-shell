@@ -3,13 +3,8 @@
 #shellcheck disable=SC2046
 
 #
-# example game
-# 'hjkl' to move
-# '#' is a wall
-# 'v ^ < >' move the player in the directions they point
-# reach the '@'!
-#
-# sometimes crashes if things happen outside of the terminal bounds
+# benchmark for comparing shell performance
+# based on example game, but without infinite loop
 #
 
 . ./core.sh
@@ -24,22 +19,13 @@ fi
 smart_source $level
 recover_all
 
-# find 's'
-spawn="$(grepfind "s")" || term_shutdown "(shell game) ${level}: no 's' found for spawn."
-# set player at 's'
-spawn_y="${spawn#y}"
-spawn_y="${spawn_y%%x*}"
-player_y=$spawn_y
-spawn_x="${spawn##*x}"
-spawn_x="${spawn_x%%=*}"
-player_x=$spawn_x
-# delete 's'
-nullify $spawn_y $spawn_x
+player_y=1
+player_x=1
 
 # main
-while true; do
+for key in j j l l l l l l l l l l l l l l j j j j l l l l l l l j j j l l l l j j j l l l l j j j j l l l l
+do
    fakedraw $player_y $player_x "$"
-   getkey key
    recover $player_y $player_x
 
    # store old position
@@ -48,12 +34,6 @@ while true; do
 
    # compute input
    case $key in
-      q) term_shutdown;;
-
-      # dev console
-      :) prompt && PATH="" $REPLY 2> /dev/null || true;;
-
-      # moving
       h) player_x=$((player_x-1));;
       j) player_y=$((player_y+1));;
       k) player_y=$((player_y-1));;
@@ -88,3 +68,5 @@ while true; do
          ;;
    esac
 done
+
+term_shutdown
