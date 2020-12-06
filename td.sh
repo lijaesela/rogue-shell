@@ -13,29 +13,16 @@
 . ./core.sh
 term_init
 
+# init map
 map="tdmap"
-smart_source tdmap
+smart_source "$map"
 recover_all
 
-spawn() { # <spawnpoint> <char> <y displacement> <x displacement>
-    # find the point
-    spawn="$(grepfind "$1")"
-    # cut y out
-    sp_y="${spawn#y}"
-    sp_y="${sp_y%%x*}"
-    # cut x out
-    sp_x="${spawn##*x}"
-    sp_x="${sp_x%%=*}"
-    # add displacement
-    sp_y="$(expr $sp_y + $3)"
-    sp_x="$(expr $sp_x + $4)"
-    # spawn it
-    drawchar "$sp_y" "$sp_x" "$2"
-    # I'd love to make this work for multiple spawnpoints
-}
+# trying to come close to having "objects"
+move() {
+    # <char> <y offset (int)> <x offset (int)>
+    # [replace with (char)] [keep old? (anything for yes)]
 
-
-move() { # <char> <y disp.> <x disp.> <<set of chars for directions>> <replace?>
     # find chars
     chars="$(grepfind "$1")"
     # exit if nothing is found
@@ -46,8 +33,8 @@ move() { # <char> <y disp.> <x disp.> <<set of chars for directions>> <replace?>
 	ch_y="${ch_y%%x*}"
 	ch_x="${i##*x}"
 	ch_x="${ch_x%%=*}"
-	# remove old char/position
-	nullify "$ch_y" "$ch_x"
+	# remove old char/position (unless told not to)
+	[ "$5" ] || nullify "$ch_y" "$ch_x"
 	# calculate didsplacement
 	ch_y="$(expr $ch_y + $2)"
 	ch_x="$(expr $ch_x + $3)"
@@ -56,27 +43,27 @@ move() { # <char> <y disp.> <x disp.> <<set of chars for directions>> <replace?>
 	case "$buf" in
 	    "^")
 		ch_y="$(expr $ch_y - 1)"
-		char="$4"
+		char="u"
 		;;
 	    "V")
 		ch_y="$(expr $ch_y + 1)"
-		char="$5"
+		char="d"
 		;;
 	    "<")
 		ch_x="$(expr $ch_x - 1)"
-		char="$6"
+		char="l"
 		;;
 	    ">")
 		ch_x="$(expr $ch_x + 1)"
-		char="$7"
+		char="r"
 		;;
 	    "G")
 		# trigger some game ending event
 		return
 		;;
 	    *)
-		if [ "$8" ]; then
-		    char="$8"
+		if [ "$4" ]; then
+		    char="$4"
 		else
 		    char="$1"
 		fi
@@ -87,7 +74,7 @@ move() { # <char> <y disp.> <x disp.> <<set of chars for directions>> <replace?>
 }
 
 # spawn D at S
-spawn "S" "D" 1 0
+move "S" 1 0 "D" 1
 
 # initial game state
 p_y=10
@@ -111,24 +98,24 @@ while true; do
 
     # move enemies
     # do two passes over all directions to prevent double moving
-    move "U" -1 0 "u" "d" "l" "r"
-    move "D" 1 0  "u" "d" "l" "r"
-    move "L" 0 -1 "u" "d" "l" "r"
-    move "R" 0 1  "u" "d" "l" "r"
-    move "u" 0 0 "U" "D" "L" "R" "U"
-    move "d" 0 0 "U" "D" "L" "R" "D"
-    move "l" 0 0 "U" "D" "L" "R" "L"
-    move "r" 0 0 "U" "D" "L" "R" "R"
+    move "U" -1 0
+    move "D" 1 0
+    move "L" 0 -1
+    move "R" 0 1
+    move "u" 0 0 "U"
+    move "d" 0 0 "D"
+    move "l" 0 0 "L"
+    move "r" 0 0 "R"
 
     # cycle turrets
     # (two passes again)
-    move "Q" 0 0 "U" "D" "L" "R" "="
-    move "3" 0 0 "U" "D" "L" "R" "-"
-    move "2" 0 0 "U" "D" "L" "R" "+"
-    move "1" 0 0 "U" "D" "L" "R" "_"
-    move "=" 0 0 "U" "D" "L" "R" "3"
-    move "-" 0 0 "U" "D" "L" "R" "2"
-    move "+" 0 0 "U" "D" "L" "R" "1"
-    move "_" 0 0 "U" "D" "L" "R" "Q"
+    move "Q" 0 0 "="
+    move "3" 0 0 "-"
+    move "2" 0 0 "+"
+    move "1" 0 0 "_"
+    move "=" 0 0 "3"
+    move "-" 0 0 "2"
+    move "+" 0 0 "1"
+    move "_" 0 0 "Q"
 
 done
