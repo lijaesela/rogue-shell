@@ -5,7 +5,6 @@
 # all in 100% POSIX shell
 # what have I gotten myself into
 # aauaughagh fuckc no my object orientation
-# STOP USING EXPR BRUH (remember to change that)
 # find a way to make this engaging
 # find a way to easily store different "levels"
 #
@@ -36,29 +35,32 @@ move() {
 	# remove old char/position (unless told not to)
 	[ "$5" ] || nullify "$ch_y" "$ch_x"
 	# calculate didsplacement
-	ch_y="$(expr $ch_y + $2)"
-	ch_x="$(expr $ch_x + $3)"
+	ch_y="$((ch_y + $2))"
+	ch_x="$((ch_x + $3))"
 	# check for bends in the track
 	buf="$(collide $ch_y $ch_x)"
 	case "$buf" in
 	    "^")
-		ch_y="$(expr $ch_y - 1)"
+		ch_y="$((ch_y - 1))"
 		char="u"
 		;;
 	    "V")
-		ch_y="$(expr $ch_y + 1)"
+		ch_y="$((ch_y + 1))"
 		char="d"
 		;;
 	    "<")
-		ch_x="$(expr $ch_x - 1)"
+		ch_x="$((ch_x - 1))"
 		char="l"
 		;;
 	    ">")
-		ch_x="$(expr $ch_x + 1)"
+		ch_x="$((ch_x + 1))"
 		char="r"
 		;;
 	    "G")
-		# trigger some game ending event
+		lives=$((lives - 1))
+		if [ $lives = 0 ]; then
+		    term_shutdown
+		fi
 		return
 		;;
 	    *)
@@ -73,12 +75,11 @@ move() {
     done
 }
 
-# spawn D at S
-move "S" 1 0 "D" 1
-
 # initial game state
 p_y=10
 p_x=20
+lives=5
+tg=0
 
 # move things
 while true; do
@@ -117,5 +118,13 @@ while true; do
     move "-" 0 0 "2"
     move "+" 0 0 "1"
     move "_" 0 0 "Q"
+
+    # spawn enemies every 4 ticks
+    if [ $tg = 3 ]; then
+	tg=0
+	move "S" 1 0 "D" 1
+    else
+	tg=$((tg+1))
+    fi
 
 done

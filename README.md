@@ -22,12 +22,4 @@ term_shutdown
 ```
 ### performance
 this engine works best with minimal, POSIX-compliant shells.  
-here is my ranking of the shells I've tried, from my experience:
-```
-dash
-yash
-bash
-ksh
-mksh
-osh
-```
+it also works pretty well with bash.

@@ -20,7 +20,7 @@ term_init() {
 }
 
 # needs to be run at the end of every game
-# runs when you hit C-c
+# can be called manually, but also runs when you hit C-c
 term_shutdown() { # [message]
    stty echo icanon
    clear; printf '[?25h[H'
@@ -279,6 +279,7 @@ savedb() {
    set | grep '^y[0-9]*x[0-9]*' >> "$1"
 }
 
+# lets "." command more convenient
 smart_source() {
    case "$1" in
       /*|./*|../*)
